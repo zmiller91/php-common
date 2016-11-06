@@ -7,210 +7,208 @@
  */
 
 /**
- * Description of UserAuth
+ * Description of User
  *
  * @author zmiller
  */
-class User {
+class User
+{
+    public static $COOKIE_IDENTIFIER = "wada";
     
-    const ERR_INVALID_USERNAME = 'invalid_username';
-    const ERR_INVALID_PASSWORD = 'invalid_password';
-    const ERR_USERNAME_EXISTS = 'username_exists';
+    public $m_bLoggedIn;
+    public $m_iUserId;
+    public $m_strName;
+    public $m_aCookie;
+    public $m_oError;
     
-    private $oConn;
-    private $bLoggedIn;
-    private $strCookieIdentifier;
-    private $iUserId;
-    private $strUserName;
-    private $aErrors;
-    private $oUserTable;
+    private $m_oConnection;
     
-    public function __construct($oConn) {
-        $this->oConn = $oConn;
-        $this->bLoggedIn = false;
-        $this->strCookieIdentifier = "mine";
-        $this->aErrors = [];
-        $this->oUserTable = new UserTable($this->oConn);
-        $this->strUserName = "";
-        
+    public function __construct($oConnection) 
+    {
+        $this->m_oConnection = $oConnection;
+        $this->m_aCookie = $this->parseCookie();
+        $this->m_oError = new Error;
+        $this->m_bLoggedIn = false;
     }
     
-    public function getUser(){
+    public function get()
+    {
         $oUser = [];
-        $oUser['id'] = $this->getId();
-        $oUser['loggedIn'] = $this->bLoggedIn;
-        $oUser['errors'] = $this->getErrors();
-        $oUser['name'] = $this->getUsername();
+        $oUser['id'] = $this->m_iUserId;
+        $oUser['loggedIn'] = $this->m_bLoggedIn;
+        $oUser['errors'] = $this->m_oError->get();
+        $oUser['name'] = $this->m_strName;
         return $oUser;
     }
     
-    public function getUsername(){
-        return $this->strUserName;
-    }
-    
-    public function getId(){
-        return $this->iUserId;
-    }
-    
-    public function getErrors(){
-        return $this->aErrors;
-    }
-    
-    public function isLoggedIn(){
-        return $this->bLoggedIn;
-    }
-    
-    public function register($strUser, $strPass){
+    public function authorize()
+    {
+        $iUser = $this->m_aCookie["user_id"];
+        $strSelector = $this->m_aCookie["selector"];
+        $strToken = $this->m_aCookie["token"];
         
-        //create user and login
-        if(!$this->oUserTable->getUser($strUser)){
-            $strHashedPass = $this->hashPassword($strPass);
-            $this->oUserTable->createUser($strUser, $strHashedPass);
-            $this->logIn($strUser, $strPass);
-           
-        //user exists
-        }else{
-            $this->aErrors = self::ERR_USERNAME_EXISTS;
-            $this->bLoggedIn = false;
-            $this->deleteCookie();
-            return $this->bLoggedIn;
-        }
-    }
-    
-    public function logIn($strUser, $strPass, $bKeepLoggedIn = false){
-
-        $strEncodedPass = $this->encode($strPass);
-        $oUserCreds = $this->oUserTable->getUser($strUser);
+        $oUserTable = new UserTable($this->m_oConnection);
+        $oUserSession = $oUserTable->getUserSession($iUser, $strSelector);
         
-        //user doesn't exist
-        if(!$oUserCreds){
-            array_push($this->aErrors, self::ERR_INVALID_USERNAME);
-            $this->bLoggedIn = false;
-            $this->deleteCookie();
-            return $this->bLoggedIn;
-        }
-        
-        $bVerified = password_verify($strEncodedPass, $oUserCreds['password']);     
-        if($bVerified){
-            
-            //create new session and set cookie 
-            $this->iUserId = $oUserCreds['id'];
-            $this->strUserName = $oUserCreds['username'];
-            $strToken = $this->generateToken();
-            $strExpiration = $this->generateExiprationDate($bKeepLoggedIn);
-            $strSelector = $this
-                    ->oUserTable
-                    ->createUserSession(
-                            $this->iUserId, 
-                            $strToken, 
-                            $strExpiration, 
-                            $bKeepLoggedIn);
-            
-            $this->setCookie($this->iUserId, $strSelector, $strToken);
-            $this->bLoggedIn = true;
-            return $this->bLoggedIn;
-            
-        //password doesn't match
-        }else{
-            array_push($this->aErrors, self::ERR_INVALID_PASSWORD);
-            $this->bLoggedIn = false;
-            $this->deleteCookie();
-            return $this->bLoggedIn;
-        }
-    }
-    
-    public function logout() {
-        $this->bLoggedIn = false;
-        $this->deleteCookie();
-        return $this->bLoggedIn;
-    }
-
-    public function authenticate(){
-        
-        //cookie must exist
-        $strCookie = !empty($_COOKIE[$this->strCookieIdentifier]) 
-                ? $_COOKIE[$this->strCookieIdentifier] 
-                : '';
-        if(empty($strCookie)){
-            $this->bLoggedIn = false;
-            return $this->bLoggedIn;
-        }
-
-        //all cookie fields must exist
-        list($iUser, $strSelector, $strToken) = explode(':', $strCookie, 3);
-        if(empty($iUser) || empty($strSelector) || empty($strToken)){
-            $this->bLoggedIn = false;
-            $this->deleteCookie();
-            return $this->bLoggedIn;
+        if($oUserTable->m_oError->hasError())
+        {
+            $this->m_oError->addAll($oUserTable->m_oError->get());
+            $this->removeSession();
+            return false;
         }
         
         //user session must exist
-        $oUserSession = $this->oUserTable->getUserSession($iUser, $strSelector);
         if($oUserSession){
             
             //session expired
             if(date("Y-m-d H:i:s") > $oUserSession['expiration']){
-                $this->bLoggedIn = false;
-                $this->deleteCookie();
-                return $this->bLoggedIn;
+                $this->removeSession();
+                return false;
             }
             
             //authenticated, generate new token and set new cookie
             if($oUserSession['token'] === $strToken){
                 
-                $this->iUserId = $iUser;
-                $this->strUserName = $oUserSession['username'];
-                $strNewToken = $this->generateToken();
-                $strExpiration = $this->generateExiprationDate($oUserSession['persist'] == 1);
-                $this->oUserTable->updateUserSession(
-                        $iUser, 
-                        $strSelector, 
-                        $strNewToken, 
-                        $strExpiration);
-                
-                Connection::commit($this->oConn);
-                $this->setCookie($iUser, $strSelector, $strNewToken);
-                $this->bLoggedIn = true;
-                return $this->bLoggedIn;
+                $this->m_iUserId = $iUser;
+                $this->m_strName = $oUserSession['username'];
+                $this->m_bLoggedIn = $this->updateSession($oUserSession['persist'] == 1);
+                return $this->m_bLoggedIn;
                 
             //security violation. user and selector exists but the token has been
             //tampered with. delete everything.
             }else{
-                $this->oUserTable->deleteAllSessions($iUser);
-                Connection::commit($this->oConn);
+                $oUserTable->deleteAllSessions($iUser);
+                if($oUserTable->m_oError->hasError())
+                {
+                    $this->m_oError->addAll($this->m_oError->get());
+                }
+                
                 $this->bLoggedIn = false;
-                $this->deleteCookie();
-                return $this->bLoggedIn;
+                $this->removeSession();
+                return false;
             }
         }
         
         //no sessions found
         $this->bLoggedIn = false;
         $this->deleteCookie();
-        return $this->bLoggedIn;
+        return false;
     }
     
-    private function createUser($strUser, $strPass){
-        $strEncodedPass = $this->encode($strPass);
-        $this->oUserTable->createUser($strUser, $strEncodedPass);
-                Connection::commit($this->oConn);
+    public function createSession($iUser, $strName, $bPersist)
+    {
+        $this->m_bLoggedIn = false;
+        $oUserTable = new UserTable($this->m_oConnection);
+        $strToken = $this->generateToken();
+        $strExpiration = $this->generateExiprationDate(true);
+        $strSelector = $oUserTable->createUserSession(
+                $iUser, 
+                $strToken, 
+                $strExpiration, 
+                $bPersist);
+
+        if($oUserTable->m_oError->hasError())
+        {
+            $this->m_oError->addAll($oUserTable->m_oError->get());
+            $this->deleteCookie();
+            return false;
+        }
+        
+        $this->setCookie($iUser, $strSelector, $strToken);
+        $this->m_bLoggedIn = true;
+        $this->m_iUserId = $iUser;
+        $this->m_strName = $strName;
+        return true;
     }
     
-    private function generateToken(){
+    public function removeSession()
+    {
+        $bSuccess = true;
+        if(empty($this->m_aCookie["user_id"]) || empty($this->m_aCookie["token"]))
+        {
+            $bSuccess = false;
+        }
+        else 
+        {
+            $oUserTable = new UserTable($this->m_oConnection);
+            $oUserTable->deleteUserSession(
+                    $this->m_aCookie["user_id"], 
+                    $this->m_aCookie["token"]);
+
+            if($oUserTable->m_oError->hasError())
+            {
+                $this->m_oError->addAll($oUserTable->m_oError->get());
+                $bSuccess = false;
+            }
+        }
+        
+        $this->deleteCookie();
+        $this->m_bLoggedIn = false;
+        $this->m_iUserId = null;
+        $this->m_strName = null;
+        
+        return $bSuccess;
+    }
+    
+    protected function updateSession($bPersist)
+    {
+        $this->m_bLoggedIn = false;
+        if(empty($this->m_aCookie["user_id"]) && $this->m_aCookie["selector"])
+        {
+            return $this->m_bLoggedIn;
+        }
+        
+        $oUserTable = new UserTable($this->m_oConnection);
+        $strNewToken = $this->generateToken();
+        $strExpiration = $this->generateExiprationDate($bPersist);
+        $oUserTable->updateUserSession(
+                $this->m_aCookie["user_id"], 
+                $this->m_aCookie["selector"], 
+                $strNewToken, 
+                $strExpiration);
+
+        if($oUserTable->m_oError->hasError())
+        {
+            $this->m_oError->addAll($oUserTable->m_oError->get());
+            return $this->m_bLoggedIn;
+        }
+        
+        $this->setCookie($this->m_aCookie["user_id"], 
+                $this->m_aCookie["selector"], $strNewToken);
+        
+        $this->m_bLoggedIn = true;
+        return $this->m_bLoggedIn;
+    }
+    
+    protected function generateToken(){
         return bin2hex(openssl_random_pseudo_bytes(60));
     }
     
-    private function setCookie($strUser, $strSelector, $strToken){
+    
+    protected function setCookie($strUser, $strSelector, $strToken){
         $strCookie = "$strUser:$strSelector:$strToken";
-        setcookie($this->strCookieIdentifier, $strCookie);
+        setcookie(User::$COOKIE_IDENTIFIER, $strCookie, 0, "/");
     }
     
-    private function deleteCookie(){
-        setcookie($this->strCookieIdentifier, '', time() - 3600);
+    public function deleteCookie(){
+        setcookie(User::$COOKIE_IDENTIFIER, '', time() - 3600);
+        $this->m_aCookie = array();
+    }
+    
+    protected function parseCookie()
+    {
+        list($iUser, $strSelector, $strToken) = 
+                explode(':', $_COOKIE[User::$COOKIE_IDENTIFIER], 3);
+        
+        return array(
+            "user_id" => $iUser,
+            "selector" => $strSelector, 
+            "token" => $strToken
+        );
     }
     
     //return an token expiration date in MYSQL DATETIME format
-    private function generateExiprationDate($bPersist){
+    protected function generateExiprationDate($bPersist){
          
         //2 weeks
         if($bPersist){
@@ -220,14 +218,5 @@ class User {
         }else{
             return date("Y-m-d H:i:s", strtotime("+1 hour"));
         }
-    }
-    
-    private function encode($strPass){
-        return base64_encode(hash('sha256', $strPass, true));
-    }
-    
-    private function hashPassword($strPass){
-        $strSHA256  = $this->encode($strPass);
-        return password_hash($strSHA256, PASSWORD_BCRYPT);
     }
 }

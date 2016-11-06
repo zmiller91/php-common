@@ -49,11 +49,14 @@ abstract class Service {
         $this->m_aInput = $aInput;
         $this->m_oError = new Error();
         $this->m_mData = null;
-        $this->m_oUser = array();
+        
         $this->m_iStatusCode = 200;
         $this->m_aHeaders = array();
         $this->m_oConnection = new Connection(DB_HOST, DB_USER, 
                 DB_PASSWD, DB_NAME);
+        
+        $this->m_oUser = new User($this->m_oConnection);
+        $this->m_oUser->authorize();
     }
     
     /**
@@ -118,7 +121,7 @@ abstract class Service {
         if($this->m_oError->hasError())
         {
             $this->m_oConnection->rollback();
-            $this->m_mData = $this->m_oError->get();
+            $this->m_mData = array("errors" => $this->m_oError->get());
             if($this->m_iStatusCode < 400)
             {
                 $this->setStatusCode(500);

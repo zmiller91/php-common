@@ -48,6 +48,17 @@ EOD;
         $this->execute($strQuery);
         return $this->selectLastInsertID();
     }
+    
+    public function deleteUserSession($strUser, $strToken)
+    {
+        $strQuery = 
+<<<EOD
+    DELETE FROM user_session
+    WHERE user = $strUser
+    AND token = '$strToken';
+EOD;
+        return $this->execute($strQuery);        
+    }
 
     public function createUserSession($strUser, $strToken, $strExpiration, $bPersist){
         $bPersist = $bPersist ? '1' : '0';
