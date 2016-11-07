@@ -197,8 +197,14 @@ class User
     
     protected function parseCookie()
     {
-        list($iUser, $strSelector, $strToken) = 
-                explode(':', $_COOKIE[User::$COOKIE_IDENTIFIER], 3);
+        $iUser = null;
+        $strSelector = null;
+        $strToken = null;
+        if(isset($_COOKIE[User::$COOKIE_IDENTIFIER]))
+        {
+            list($iUser, $strSelector, $strToken) = 
+                    explode(':', $_COOKIE[User::$COOKIE_IDENTIFIER], 3);
+        }
         
         return array(
             "user_id" => $iUser,
