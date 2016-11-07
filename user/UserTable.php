@@ -92,12 +92,11 @@ EOD;
         return !empty($oUser) ? $oUser[0] : false;
     }
     
-    public function updateUserSession($iUser, $iSelector, $strToken, $strExpiration){
+    public function updateUserSession($iUser, $iSelector, $strExpiration){
         $strQuery = 
 <<<EOD
     UPDATE user_sessions 
-    SET token = "$strToken",
-    expiration = "$strExpiration",
+    SET expiration = "$strExpiration",
     updated_date = NOW()
     WHERE id = $iSelector
     AND user = $iUser;

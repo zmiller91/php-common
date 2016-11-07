@@ -47,9 +47,11 @@ class User
         $strSelector = $this->m_aCookie["selector"];
         $strToken = $this->m_aCookie["token"];
         
+        // Get the user's session
         $oUserTable = new UserTable($this->m_oConnection);
         $oUserSession = $oUserTable->getUserSession($iUser, $strSelector);
         
+        // If there's an error, remove the session and return
         if($oUserTable->m_oError->hasError())
         {
             $this->m_oError->addAll($oUserTable->m_oError->get());
@@ -57,26 +59,30 @@ class User
             return false;
         }
         
-        //user session must exist
+        // User session must exist
         if($oUserSession){
             
-            //session expired
+            // Session expired, remove it
             if(date("Y-m-d H:i:s") > $oUserSession['expiration']){
                 $this->removeSession();
                 return false;
             }
             
-            //authenticated, generate new token and set new cookie
+            // Authenticated, update token timestamp
             if($oUserSession['token'] === $strToken){
                 
                 $this->m_iUserId = $iUser;
                 $this->m_strName = $oUserSession['username'];
-                $this->m_bLoggedIn = $this->updateSession($oUserSession['persist'] == 1);
-                return $this->m_bLoggedIn;
+                $this->m_bLoggedIn = $this->updateSession(
+                        $oUserSession['persist'] == 1, $strToken);
                 
-            //security violation. user and selector exists but the token has been
-            //tampered with. delete everything.
-            }else{
+                return $this->m_bLoggedIn;
+            }
+                
+            // Security violation. User and selector exist but the token does
+            // not match. Delete everything.
+            else
+            {
                 $oUserTable->deleteAllSessions($iUser);
                 if($oUserTable->m_oError->hasError())
                 {
@@ -150,7 +156,7 @@ class User
         return $bSuccess;
     }
     
-    protected function updateSession($bPersist)
+    protected function updateSession($bPersist, $strToken)
     {
         $this->m_bLoggedIn = false;
         if(empty($this->m_aCookie["user_id"]) && $this->m_aCookie["selector"])
@@ -159,12 +165,10 @@ class User
         }
         
         $oUserTable = new UserTable($this->m_oConnection);
-        $strNewToken = $this->generateToken();
         $strExpiration = $this->generateExiprationDate($bPersist);
         $oUserTable->updateUserSession(
                 $this->m_aCookie["user_id"], 
                 $this->m_aCookie["selector"], 
-                $strNewToken, 
                 $strExpiration);
 
         if($oUserTable->m_oError->hasError())
@@ -174,7 +178,7 @@ class User
         }
         
         $this->setCookie($this->m_aCookie["user_id"], 
-                $this->m_aCookie["selector"], $strNewToken);
+                $this->m_aCookie["selector"], $strToken);
         
         $this->m_bLoggedIn = true;
         return $this->m_bLoggedIn;
