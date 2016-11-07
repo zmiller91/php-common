@@ -56,7 +56,6 @@ abstract class Service {
                 DB_PASSWD, DB_NAME);
         
         $this->m_oUser = new User($this->m_oConnection);
-        $this->m_oUser->authorize();
     }
     
     /**

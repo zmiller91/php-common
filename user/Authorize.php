@@ -25,6 +25,7 @@ class Authorize extends Service
 
     protected function authorize() 
     {
+        $this->m_oUser->authorize();
         return true;
     }
 

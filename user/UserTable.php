@@ -53,7 +53,7 @@ EOD;
     {
         $strQuery = 
 <<<EOD
-    DELETE FROM user_session
+    DELETE FROM user_sessions
     WHERE user = $strUser
     AND token = '$strToken';
 EOD;

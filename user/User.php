@@ -47,6 +47,12 @@ class User
         $strSelector = $this->m_aCookie["selector"];
         $strToken = $this->m_aCookie["token"];
         
+        // Invalid cookie, return false
+        if(empty($iUser) && empty($strSelector) && empty($strToken))
+        {
+            return false;
+        }
+        
         // Get the user's session
         $oUserTable = new UserTable($this->m_oConnection);
         $oUserSession = $oUserTable->getUserSession($iUser, $strSelector);
