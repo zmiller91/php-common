@@ -9,6 +9,7 @@ abstract class Service {
     
     const GET = "GET";
     const POST = "POST";
+    const PUT = "PUT";
     
     /**
      * @var Connection 
@@ -76,6 +77,10 @@ abstract class Service {
             
             case self::POST:
                 $bSuccess = $bSuccess && $this->post();
+                break;
+            
+            case self::PUT:
+                $bSuccess = $bSuccess && $this->put();
                 break;
             
             default:
@@ -146,7 +151,7 @@ abstract class Service {
     
     /**
      * Method will get called on a GET request. Overriding methods should not
-     * call the super method. If a child class does not support a POST request
+     * call the super method. If a child class does not support a GET request
      * then the parent class will return false and a 405 status code will be 
      * set.
      * 
@@ -167,6 +172,20 @@ abstract class Service {
      * @return boolean success or failure
      */
     protected function post()
+    {
+        $this->methodNotAllowed();
+        return false;
+    }
+    
+    /**
+     * Method will get called on a PUT request. Overriding methods should not
+     * call the super method. If a child class does not support a PUT request
+     * then the parent class will return false and a 405 status code will be 
+     * set.
+     * 
+     * @return boolean success or failure
+     */
+    protected function put()
     {
         $this->methodNotAllowed();
         return false;
