@@ -27,7 +27,7 @@ class User
     {
         $this->m_oConnection = $oConnection;
         $this->m_aCookie = $this->parseCookie();
-        $this->m_oError = new Error;
+        $this->m_oError = new ZError;
         $this->m_bLoggedIn = false;
     }
     

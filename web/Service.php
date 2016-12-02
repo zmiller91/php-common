@@ -17,7 +17,7 @@ abstract class Service {
     protected $m_oConnection;
     
     /**
-     * @var Error 
+     * @var ZError 
      */
     protected $m_oError;
     
@@ -48,7 +48,7 @@ abstract class Service {
     {
         $this->m_strMethod = $strMethod;
         $this->m_aInput = $aInput;
-        $this->m_oError = new Error();
+        $this->m_oError = new ZError();
         $this->m_mData = null;
         
         $this->m_iStatusCode = 200;

@@ -13,7 +13,7 @@ class BaseTable
     public function __construct($conn) 
     {
         $this->m_oConn = $conn;
-        $this->m_oError = new Error();
+        $this->m_oError = new ZError();
     }
     
     /*

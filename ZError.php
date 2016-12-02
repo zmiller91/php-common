@@ -3,7 +3,7 @@
 /**
  * Class for handling errors. 
  */
-class Error 
+class ZError 
 {
     /**
      * List of errors
