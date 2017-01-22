@@ -42,4 +42,22 @@ class BaseTable
         $result = $this->execute("SELECT LAST_INSERT_ID() as 'id';");
         return $result[0]['id'];
     }
+    
+    protected function map($result, $keys) {
+        $retval = array();
+        foreach($result as $r) {
+            $retval[$this->createKey($keys, $r)] = $r;
+        }
+        
+        return $retval;
+    }
+    
+    private function createKey($keys, $object) {
+        $parts = array();
+        foreach($keys as $k) {
+            array_push($parts, $object[$k]);
+        }
+        
+        return implode($parts);
+    }
 }
