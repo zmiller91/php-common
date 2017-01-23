@@ -58,6 +58,6 @@ class BaseTable
             array_push($parts, $object[$k]);
         }
         
-        return implode($parts);
+        return implode("-", $parts);
     }
 }
