@@ -10,6 +10,8 @@ abstract class Service {
     const GET = "GET";
     const POST = "POST";
     const PUT = "PUT";
+    const DELETE = "DELETE";
+    const PATCH = "PATCH";
     
     /**
      * @var Connection 
@@ -81,6 +83,10 @@ abstract class Service {
             
             case self::PUT:
                 $bSuccess = $bSuccess && $this->put();
+                break;
+            
+            case self::DELETE:
+                $bSuccess = $bSuccess && $this->delete();
                 break;
             
             default:
@@ -186,6 +192,34 @@ abstract class Service {
      * @return boolean success or failure
      */
     protected function put()
+    {
+        $this->methodNotAllowed();
+        return false;
+    }
+    
+    /**
+     * Method will get called on a DELETE request. Overriding methods should not
+     * call the super method. If a child class does not support a DELETE request
+     * then the parent class will return false and a 405 status code will be 
+     * set.
+     * 
+     * @return boolean success or failure
+     */
+    protected function delete()
+    {
+        $this->methodNotAllowed();
+        return false;
+    }
+    
+    /**
+     * Method will get called on a PATCH request. Overriding methods should not
+     * call the super method. If a child class does not support a PATCH request
+     * then the parent class will return false and a 405 status code will be 
+     * set.
+     * 
+     * @return boolean success or failure
+     */
+    protected function PATCH()
     {
         $this->methodNotAllowed();
         return false;
