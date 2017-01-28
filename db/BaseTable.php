@@ -52,6 +52,10 @@ class BaseTable
         return $retval;
     }
     
+    protected function escape($string) {
+        return $this->m_oConn->get()->real_escape_string($string);
+    }
+    
     private function createKey($keys, $object) {
         $parts = array();
         foreach($keys as $k) {
