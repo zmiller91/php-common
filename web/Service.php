@@ -89,6 +89,10 @@ abstract class Service {
                 $bSuccess = $bSuccess && $this->delete();
                 break;
             
+            case self::PATCH:
+                $bSuccess = $bSuccess && $this->patch();
+                break;
+            
             default:
                 $bSuccess = false;
                 $this->methodNotAllowed();
@@ -219,7 +223,7 @@ abstract class Service {
      * 
      * @return boolean success or failure
      */
-    protected function PATCH()
+    protected function patch()
     {
         $this->methodNotAllowed();
         return false;
