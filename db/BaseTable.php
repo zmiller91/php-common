@@ -75,7 +75,12 @@ class BaseTable
      * @return type
      */
     protected function escape($string) {
-        return $this->m_oConn->get()->real_escape_string($string);
+        $escaped = null;
+        if(isset($string)) {
+            $escaped = $this->m_oConn->get()->real_escape_string($string);
+        }
+        
+        return $escaped;
     }
     
     /**
