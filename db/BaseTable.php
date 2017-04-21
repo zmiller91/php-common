@@ -21,6 +21,24 @@ class BaseTable
         $this->m_oError = new ZError();
     }
     
+    /**
+     * Convenience method to check for errors
+     * 
+     * @param bool
+     */
+    public function hasErrors() {
+        return $this->m_oError->hasError();
+    }
+    
+    /**
+     * Convenience method to get errors
+     * 
+     * @param array
+     */
+    public function getErrors() {
+        return $this->m_oError->get();
+    }
+    
     /*
      * Executes a query. Returns array of associative arrays if any 
      * mysqli_results exist.
@@ -59,7 +77,7 @@ class BaseTable
      * @param type $keys
      * @return type
      */
-    protected function map($result, $keys) {
+    public function map($result, $keys) {
         $retval = array();
         foreach($result as $r) {
             $retval[$this->createKey($keys, $r)] = $r;
@@ -81,6 +99,17 @@ class BaseTable
         }
         
         return $escaped;
+    }
+    
+    /**
+     * Calls escape on every value in a flat map. 
+     * 
+     * @param type $flatMap
+     */
+    protected function sanitizeFlatMap(&$flatMap) {
+        foreach($flatMap as $key => $value) {
+            $flatMap[$key] = $this->escape($value);
+        }
     }
     
     /**
