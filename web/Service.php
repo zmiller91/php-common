@@ -68,8 +68,7 @@ abstract class Service {
      */
     public function run()
     {
-        $bSuccess = $this->authorize() && 
-                $this->validate();
+        $bSuccess = $this->validate() && $this->authorize();
         
         switch($this->m_strMethod)
         {
